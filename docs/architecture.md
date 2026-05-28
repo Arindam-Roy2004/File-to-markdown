@@ -2,6 +2,8 @@
 
 This document describes how `file-to-markdown` is organised, why each piece exists, and how the moving parts fit together. It is intended as a deep dive for contributors and reviewers; for a higher-level overview, see the project [`README.md`](../README.md).
 
+> **Scope of this service.** `file-to-markdown` is a *document-to-Markdown converter only*. It is the first step of an LLM ingestion pipeline. It does **not** implement chunking, embeddings, vector storage, retrieval, prompt construction, or any LLM calls. References to RAG below describe the broader pipeline this service is designed to feed; they are not features of this codebase.
+
 ---
 
 ## Table of Contents
@@ -522,7 +524,7 @@ The current codebase is intentionally minimal so that it can grow without churn.
 1. **Persistence module.** A `jobs` module records each conversion (input metadata, output token count, latency, success/failure). Drives a future history endpoint.
 2. **Asynchronous queue.** A `queue` directory (BullMQ on Redis) lets large or slow conversions run out-of-band. The HTTP endpoint returns a job ID; the client polls or subscribes to a webhook.
 3. **Authentication module.** `modules/auth/` and `modules/users/` add per-user sessions. Conversion gets an authorisation middleware that gates the endpoint.
-4. **AI sub-system.** A top-level `src/ai/` directory follows the steering layout (`chains/`, `prompts/`, `embeddings/`, `vectorstores/`, `rag/`, `evaluations/`). The conversion module remains a pure transformation; AI orchestration sits above it.
+4. **Chunking endpoint.** A `/api/convert/chunks` route on the conversion module that returns Markdown split on heading boundaries with configurable chunk size and overlap, plus per-chunk token counts. This is the closest the project will come to RAG. Embeddings, vector storage, retrieval, and LLM orchestration are intentionally out of scope; if they are ever built, they will live in a separate downstream service.
 5. **Front-end.** A separate package (likely Next.js) consumes the API and offers drag-and-drop uploads with live token counters.
 6. **Observability.** OpenTelemetry tracing across the Multer-validation-controller-service-converter chain, exported to any OTLP backend.
 
